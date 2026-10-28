@@ -87,6 +87,7 @@ Règles d'intégration :
 ## 5. Audit
 
 Voir [`docs/AUDIT.md`](docs/AUDIT.md) : notes par domaine, corrections faites et plan d'action avant lancement.
+Mise en ligne et liste de test sur téléphone : [`docs/LANCEMENT.md`](docs/LANCEMENT.md).
 
 ## 6. Mobile, PWA, déploiement
 

@@ -4,6 +4,7 @@ import { CARDS, CARD_IDS, FACTORY, RARITY_LABEL } from '../core/config';
 import { levelProgress, offlineParams } from '../core/stats';
 import type { CardId } from '../core/types';
 import { sfx } from '../game/shared/audio';
+import { APP_VERSION, LEGAL } from '../legal';
 import { Button } from './Button';
 import { useStore } from './hooks';
 
@@ -25,7 +26,7 @@ export function Sheet({ title, onClose, children }: { title: string; onClose: ()
 
 /* --------------------------------- Settings -------------------------------- */
 
-export function SettingsSheet({ onClose }: { onClose: () => void }) {
+export function SettingsSheet({ onClose, onLegal }: { onClose: () => void; onLegal: () => void }) {
   const store = useStore();
   const s = store.state.settings;
   const [confirm, setConfirm] = useState(false);
@@ -91,9 +92,12 @@ export function SettingsSheet({ onClose }: { onClose: () => void }) {
       >
         {confirm ? '⚠️ Confirmer la remise à zéro' : 'Recommencer la partie'}
       </Button>
+      <button type="button" className="link-btn" onClick={() => (sfx.play('click'), onLegal())}>
+        Mentions légales & confidentialité
+      </button>
       <p className="credits">
-        Money Machine v1.0 — aucun achat, aucune publicité, aucune donnée personnelle collectée. La partie est sauvegardée uniquement
-        sur cet appareil. Astuce : ajoute le jeu à l'écran d'accueil pour ne jamais perdre ta sauvegarde.
+        Money Machine v{APP_VERSION} — aucun achat, aucune publicité, aucune donnée personnelle collectée. La partie est sauvegardée
+        uniquement sur cet appareil. Astuce : ajoute le jeu à l'écran d'accueil pour ne jamais perdre ta sauvegarde.
       </p>
     </Sheet>
   );
@@ -225,6 +229,45 @@ export function WheelSheet({ index, onClose }: { index: number; onClose: () => v
       <Button testId="wheel-up" color="mint" repeat disabled={maxed} dim={store.state.money.lt(cost)} onPress={() => store.upgradeWheel(index)}>
         {maxed ? 'NIVEAU MAX' : `Améliorer → ${formatMult(nextMult)} • ${formatMoney(cost)}`}
       </Button>
+    </Sheet>
+  );
+}
+
+/* ---------------------------------- Legal ---------------------------------- */
+
+export function LegalSheet({ onClose }: { onClose: () => void }) {
+  return (
+    <Sheet title="Mentions légales" onClose={onClose}>
+      <div className="legal">
+        {LEGAL.publisher && (
+          <section>
+            <h3>Éditeur</h3>
+            <p>{LEGAL.publisher}</p>
+            {LEGAL.director && <p>Directeur de la publication : {LEGAL.director}</p>}
+            {LEGAL.contact && <p>Contact : {LEGAL.contact}</p>}
+          </section>
+        )}
+        <section>
+          <h3>Hébergement</h3>
+          <p>{LEGAL.host}</p>
+        </section>
+        <section>
+          <h3>Données personnelles</h3>
+          <p>
+            Money Machine ne collecte aucune donnée personnelle, n'utilise ni cookie, ni traceur, ni publicité. La progression est
+            enregistrée uniquement dans le stockage local de ton navigateur (nécessaire au fonctionnement du jeu) et n'est jamais
+            envoyée sur un serveur. Pour l'effacer : Réglages → « Recommencer la partie », ou effacer les données du site.
+          </p>
+        </section>
+        <section>
+          <h3>Jeu</h3>
+          <p>
+            Jeu gratuit, sans argent réel : les montants affichés sont fictifs et ne peuvent être ni achetés, ni échangés, ni retirés.
+            Graphismes, sons et code originaux.
+          </p>
+        </section>
+        <p className="credits">Version {APP_VERSION}</p>
+      </div>
     </Sheet>
   );
 }

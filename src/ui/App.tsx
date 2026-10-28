@@ -7,9 +7,10 @@ import { FactoryPanel } from './FactoryPanel';
 import { useStore, useStoreEvent } from './hooks';
 import { TopHud } from './Hud';
 import { Celebrations, OfflineModal, TapHint, Toasts } from './Overlays';
-import { CardsSheet, MissionsSheet, SettingsSheet, WheelSheet } from './Sheets';
+import { CardsSheet, LegalSheet, MissionsSheet, SettingsSheet, WheelSheet } from './Sheets';
+import { InstallHint } from './InstallHint';
 
-type SheetState = { kind: 'settings' } | { kind: 'missions' } | { kind: 'cards'; slot?: number } | { kind: 'wheel'; index: number } | null;
+type SheetState = { kind: 'settings' } | { kind: 'legal' } | { kind: 'missions' } | { kind: 'cards'; slot?: number } | { kind: 'wheel'; index: number } | null;
 
 export function App() {
   const host = useRef<HTMLDivElement>(null);
@@ -57,10 +58,12 @@ export function App() {
       <main className="stage">
         <div ref={host} className="game-host" data-testid="game" />
         <TapHint />
+        <InstallHint />
         <Toasts />
       </main>
       {s.mode === 'drop' ? <DropPanel onOpenCards={(slot) => setSheet({ kind: 'cards', slot })} /> : <FactoryPanel />}
-      {sheet?.kind === 'settings' && <SettingsSheet onClose={() => setSheet(null)} />}
+      {sheet?.kind === 'settings' && <SettingsSheet onClose={() => setSheet(null)} onLegal={() => setSheet({ kind: 'legal' })} />}
+      {sheet?.kind === 'legal' && <LegalSheet onClose={() => setSheet({ kind: 'settings' })} />}
       {sheet?.kind === 'missions' && <MissionsSheet onClose={() => setSheet(null)} />}
       {sheet?.kind === 'cards' && <CardsSheet slot={sheet.slot} onClose={() => setSheet(null)} />}
       {sheet?.kind === 'wheel' && <WheelSheet index={sheet.index} onClose={() => setSheet(null)} />}

@@ -139,7 +139,7 @@ Points forts :
 
 - RGPD : aucun cookie, aucun traceur, sauvegarde uniquement locale. **Pas de bandeau cookies nécessaire**. Une mention de confidentialité est ajoutée dans Réglages.
 - Pas d'argent réel ni de publicité : aucun risque lié aux jeux d'argent ni aux achats intégrés.
-- **Manquant (bloquant en France)** : les mentions légales (nom ou raison sociale, contact, hébergeur Vercel Inc.). Je ne les ai pas ajoutées car elles demandent tes informations.
+- **Mentions légales** : page ajoutée en v1.0 (Réglages → Mentions légales), avec l'hébergeur et la politique de données. L'identité de l'éditeur vient des variables `VITE_LEGAL_PUBLISHER` et `VITE_LEGAL_CONTACT`, à renseigner dans Vercel ; le build affiche un avertissement tant qu'elles manquent.
 - **À vérifier** :
   - disponibilité du nom « Money Machine » (INPI, stores, autres jeux du même nom) ;
   - pour la vidéo TikTok, ne pas montrer le jeu de référence d'une manière qui laisserait croire à un lien officiel.
@@ -167,10 +167,11 @@ Points forts :
 | Priorité | Action | Qui | Effort |
 |---|---|---|---|
 | 🔴 Bloquant | Test sur un vrai iPhone et un Android bas de gamme (son, fluidité, encoche, installation) | toi | 30 min |
-| 🔴 Bloquant | Mentions légales (éditeur, contact, hébergeur) | toi, puis intégration | 15 min |
+| 🔴 Bloquant | Mentions légales : page intégrée (v1.0), il reste à renseigner `VITE_LEGAL_PUBLISHER` et `VITE_LEGAL_CONTACT` dans Vercel | toi | 5 min |
 | 🟠 Important | Mesure d'audience sans cookie + suivi des erreurs | à décider | 1 h |
 | 🟠 Important | Faire jouer 5 personnes 30 min, ajuster le rythme | toi | 1 jour |
-| 🟡 Conseillé | Mini-tutoriel usine et cartes, aide à l'installation sur iPhone | dev | 2 h |
-| 🟡 Conseillé | Temps estimé avant le prochain plateau | dev | 30 min |
+| ✅ Fait (v1.0) | Aide à l'installation (bouton Android, instructions iPhone) | — | — |
+| 🟡 Conseillé | Mini-tutoriel usine et cartes | dev | 2 h |
+| ✅ Fait (v1.0) | Temps estimé avant le prochain plateau | — | — |
 | 🟡 Conseillé | Export/import de sauvegarde | dev | 1 h |
 | ⚪ Plus tard | Prestige, musique, Phaser allégé, tests navigateur en CI | dev | — |

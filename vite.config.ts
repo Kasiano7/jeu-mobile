@@ -9,17 +9,33 @@ function siteUrl(): string {
   return raw ? raw.replace(/\/?$/, '/') : './';
 }
 
+/** Loud reminder: the legal notice is mandatory for a public site in France. */
+const legalCheck = (): Plugin => ({
+  name: 'legal-check',
+  apply: 'build',
+  buildStart() {
+    if (!process.env.VITE_LEGAL_PUBLISHER || !process.env.VITE_LEGAL_CONTACT) {
+      this.warn(
+        'Mentions légales incomplètes : définir VITE_LEGAL_PUBLISHER et VITE_LEGAL_CONTACT (variables d\'environnement Vercel) avant la mise en ligne publique.',
+      );
+    }
+  },
+});
+
 const htmlSiteUrl = (): Plugin => ({
   name: 'html-site-url',
   transformIndexHtml: (html) => html.replaceAll('%SITE_URL%', siteUrl()),
 });
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import pkg from './package.json' with { type: 'json' };
 
 export default defineConfig({
   // Relative base keeps the build usable from Vercel, a sub-path or a Capacitor webview.
   base: './',
+  define: { __APP_VERSION__: JSON.stringify(pkg.version) },
   plugins: [
+    legalCheck(),
     htmlSiteUrl(),
     react(),
     VitePWA({

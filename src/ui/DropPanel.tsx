@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { formatMoney } from '../core/bignum';
+import { formatDuration, formatMoney } from '../core/bignum';
 import { CARDS, FACTORY } from '../core/config';
 import { sfx } from '../game/shared/audio';
 import { Button } from './Button';
@@ -41,6 +41,10 @@ function Upgrades() {
   const views = dropUpgradeViews(store);
   const next = store.nextBoard();
   const money = store.state.money;
+  // Rough time to afford the next board at the current (unboosted) income: a visible goal.
+  const rate = store.measuredRate(20, true);
+  const etaSec = next && money.lt(next.cost) && rate.gt(0) ? next.cost.sub(money).div(rate).toNumber() : null;
+  const eta = etaSec !== null && etaSec < 48 * 3600 ? etaSec : null;
   return (
     <div className="upgrades">
       <div className="up-grid">
@@ -74,7 +78,10 @@ function Upgrades() {
           <span className="board-txt">
             🌟 {next.name} <b>×{next.mult}</b>
           </span>
-          <span className="board-cost">{formatMoney(next.cost)}</span>
+          <span className="board-cost">
+            {formatMoney(next.cost)}
+            {eta !== null && <small> ≈ {formatDuration(eta)}</small>}
+          </span>
         </Button>
       ) : (
         <div className="board-done">🏆 Tous les plateaux sont débloqués !</div>
