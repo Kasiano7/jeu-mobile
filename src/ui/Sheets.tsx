@@ -96,8 +96,8 @@ export function SettingsSheet({ onClose, onLegal }: { onClose: () => void; onLeg
         Mentions légales & confidentialité
       </button>
       <p className="credits">
-        Money Machine v{APP_VERSION} — aucun achat, aucune publicité, aucune donnée personnelle collectée. La partie est sauvegardée
-        uniquement sur cet appareil. Astuce : ajoute le jeu à l'écran d'accueil pour ne jamais perdre ta sauvegarde.
+        Money Machine v{APP_VERSION} — aucun achat, aucune publicité, aucune donnée personnelle collectée (statistiques de visite
+        anonymes, sans cookie). La partie est sauvegardée uniquement sur cet appareil. Astuce : ajoute le jeu à l'écran d'accueil pour ne jamais perdre ta sauvegarde.
       </p>
     </Sheet>
   );
@@ -254,9 +254,13 @@ export function LegalSheet({ onClose }: { onClose: () => void }) {
         <section>
           <h3>Données personnelles</h3>
           <p>
-            Money Machine ne collecte aucune donnée personnelle, n'utilise ni cookie, ni traceur, ni publicité. La progression est
-            enregistrée uniquement dans le stockage local de ton navigateur (nécessaire au fonctionnement du jeu) et n'est jamais
-            envoyée sur un serveur. Pour l'effacer : Réglages → « Recommencer la partie », ou effacer les données du site.
+            Money Machine ne collecte aucune donnée personnelle et n'utilise ni cookie, ni publicité. La progression est enregistrée
+            uniquement dans le stockage local de ton navigateur (nécessaire au fonctionnement du jeu) et n'est jamais envoyée sur un
+            serveur. Pour l'effacer : Réglages → « Recommencer la partie », ou effacer les données du site.
+          </p>
+          <p>
+            Mesure d'audience : Vercel Web Analytics, sans cookie et anonyme (pages vues, pays, type d'appareil et quelques étapes de jeu
+            comme « niveau atteint »). Aucune donnée ne permet de t'identifier et rien n'est revendu.
           </p>
         </section>
         <section>

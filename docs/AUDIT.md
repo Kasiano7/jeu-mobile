@@ -27,7 +27,7 @@ Le cœur du jeu est solide et les défauts bloquants trouvés pendant l'audit so
 | 10 | Accessibilité | 7 | **8** | zoom réactivé, animations réduites selon le système |
 | 11 | Sécurité | 7 | **9** | en-têtes de sécurité, crochets de debug masqués |
 | 12 | Légal et conformité | 5 | **5,5** | RGPD OK (aucune donnée), mentions légales absentes |
-| 13 | Mesure d'audience et suivi des erreurs | 1 | **1** | rien en place |
+| 13 | Mesure d'audience et suivi des erreurs | 1 | **6** | Vercel Web Analytics sans cookie ; pas encore de suivi des erreurs |
 | 14 | Qualité du code et tests | 7 | **8,5** | 22 tests, CI GitHub ajoutée |
 
 Lighthouse mobile (build de production, avant → après) : Performance 60 → **66** · Accessibilité 92 → **100** · Bonnes pratiques 100 → **100** · SEO 91 → **100**.
@@ -145,13 +145,15 @@ Points forts :
   - pour la vidéo TikTok, ne pas montrer le jeu de référence d'une manière qui laisserait croire à un lien officiel.
 - Les graphismes et sons sont générés par le code, donc pas de problème de droits sur les visuels.
 
-## 13. Mesure d'audience et suivi des erreurs — 1/10
+## 13. Mesure d'audience et suivi des erreurs — 6/10 (avant 1/10)
 
-- Rien n'est en place : impossible de connaître les visites issues de TikTok, la durée de jeu ou les plantages sur certains téléphones.
-- Recommandation :
-  - Vercel Web Analytics, sans cookie, donc compatible avec l'absence de bandeau ; quelques événements utiles : 1ʳᵉ amélioration, usine débloquée, 2ᵉ plateau ;
-  - un outil de suivi des erreurs JavaScript (par exemple Sentry, offre gratuite).
-- Ces deux outils impliquent de compléter la mention de confidentialité et la CSP. **À décider de ton côté.**
+- **Ajouté (v1.0)** : Vercel Web Analytics, sans cookie, chargé depuis le même domaine. Il reste compatible avec la CSP et ne demande pas de bandeau.
+  - Mesure : pages vues, provenance, appareil et 7 étapes du parcours (première amélioration, niveaux, usine, première roue, plateaux, cadeau, installation).
+  - Les paramètres d'URL ne sont jamais transmis.
+  - Testé sur le build de production : aucune erreur.
+  - À activer dans l'onglet Analytics du projet Vercel.
+- Mention de confidentialité mise à jour en conséquence.
+- Reste : pas de suivi des erreurs JavaScript (plantages sur certains téléphones invisibles).
 
 ## 14. Qualité du code et tests — 8,5/10
 
@@ -168,7 +170,8 @@ Points forts :
 |---|---|---|---|
 | 🔴 Bloquant | Test sur un vrai iPhone et un Android bas de gamme (son, fluidité, encoche, installation) | toi | 30 min |
 | 🔴 Bloquant | Mentions légales : page intégrée (v1.0), il reste à renseigner `VITE_LEGAL_PUBLISHER` et `VITE_LEGAL_CONTACT` dans Vercel | toi | 5 min |
-| 🟠 Important | Mesure d'audience sans cookie + suivi des erreurs | à décider | 1 h |
+| ✅ Fait (v1.0) | Mesure d'audience sans cookie (à activer dans l'onglet Analytics de Vercel) | — | — |
+| 🟠 Important | Suivi des erreurs JavaScript | à décider | 30 min |
 | 🟠 Important | Faire jouer 5 personnes 30 min, ajuster le rythme | toi | 1 jour |
 | ✅ Fait (v1.0) | Aide à l'installation (bouton Android, instructions iPhone) | — | — |
 | 🟡 Conseillé | Mini-tutoriel usine et cartes | dev | 2 h |

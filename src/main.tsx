@@ -4,6 +4,7 @@ import '@fontsource/fredoka/latin-600.css';
 import './styles.css';
 import { createRoot } from 'react-dom/client';
 import { registerSW } from 'virtual:pwa-register';
+import { initAnalytics } from './analytics';
 import { store } from './core/instance';
 import { App } from './ui/App';
 
@@ -21,6 +22,7 @@ async function boot() {
   // Ask the browser not to evict the save (Safari clears site storage after 7 days without a visit).
   void navigator.storage?.persist?.().catch(() => {});
   store.startAutosave(5000);
+  initAnalytics(store);
   let hiddenAt = 0;
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') {
