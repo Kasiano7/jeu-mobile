@@ -32,7 +32,7 @@ export function getDropStats(s: GameState): DropStats {
     .mul(1 + cardBonus(s, 'dropValue'));
   const rateMult = (1 + 0.1 * u.rate) * (1 + cardBonus(s, 'dropRate'));
   const gatePower = 1 + cardBonus(s, 'gatePower');
-  const gateUnit = coinValue.mul(1.5 * (1 + 0.2 * u.gates) * gatePower);
+  const gateUnit = coinValue.mul(0.6 * (1 + 0.2 * u.gates) * gatePower);
   const rushLevel = cardBonus(s, 'rush');
   const droppers = 1 + u.dropper;
   const rawInterval = 1.5 / rateMult;
@@ -51,7 +51,7 @@ export function getDropStats(s: GameState): DropStats {
     bumpers: u.obstacles >= 1,
     spinners: u.obstacles >= 2,
     splitter: u.obstacles >= 3,
-    bumperBonus: coinValue.mul(0.5 * (1 + cardBonus(s, 'bumper'))),
+    bumperBonus: coinValue.mul(0.25 * (1 + cardBonus(s, 'bumper'))),
     spinnerMult: 1.25,
     board,
     incomeMult: 1 + cardBonus(s, 'allIncome'),

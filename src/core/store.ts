@@ -199,7 +199,7 @@ export class GameStore {
     const target = levelFor(this.state.lifetimeEarned);
     while (this.state.level < target) {
       this.state.level++;
-      const money = D(Math.max(50 * this.state.level, 0)).max(this.measuredRate(30).mul(20)).floor();
+      const money = D(25 * this.state.level).max(this.measuredRate(30).mul(10)).floor();
       this.state.money = this.state.money.add(money);
       const card = this.grantRandomCard(this.state.level >= 4 ? 1 : 0, true);
       this.events.emit('levelUp', { level: this.state.level, card, money });

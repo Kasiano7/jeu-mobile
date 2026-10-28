@@ -37,7 +37,7 @@ describe('formatting', () => {
 
   it('computes geometric costs', () => {
     expect(geometricCost(10, 2, 3).toNumber()).toBe(80);
-    expect(DROP_UPGRADES.value.cost(0).toNumber()).toBe(10);
+    expect(DROP_UPGRADES.value.cost(0).toNumber()).toBe(15);
     expect(DROP_UPGRADES.value.cost(5).gt(DROP_UPGRADES.value.cost(4))).toBe(true);
   });
 });

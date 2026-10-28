@@ -18,6 +18,9 @@ import {
 import { WORLD_W, buildDropLayout, type DropLayout, type GateLayout } from './layout';
 
 const STEP = 1000 / 60;
+/** Manual drops: a small regenerating budget so tapping helps without replacing the machine. */
+const TAP_MAX = 5;
+const TAP_REGEN_MS = 2500;
 const MAX_SPEED = 26;
 
 type Tag =
@@ -86,6 +89,10 @@ export class DropScene extends Phaser.Scene {
   private orb: { body: MatterJS.BodyType; img: Phaser.GameObjects.Image; glow: Phaser.GameObjects.Image; until: number } | null = null;
   private nextOrbAt = 0;
   private lastTap = 0;
+  private tapCharges = TAP_MAX;
+  private tapRegen = 0;
+  private tapPips: Phaser.GameObjects.Image[] = [];
+  private lastTapDeny = -10_000;
   private rushFrame!: Phaser.GameObjects.Graphics;
   private structureKey = '';
   private unsub: (() => void)[] = [];
@@ -283,6 +290,12 @@ export class DropScene extends Phaser.Scene {
       if (n > 3) img.setScale(0.82);
       const light = this.add.image(0, L.dropperY - 64, 'dropperLight').setDepth(21).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.3);
       this.droppers.push({ img, light, x: L.W / 2, acc: Math.random() * 0.5, phase: (i / n) * Math.PI * 2 + 0.5, speed: 0.45 + i * 0.07, squash: 0 });
+    }
+
+    // Manual drop charges indicator (top-left, under the rail)
+    this.tapPips = [];
+    for (let i = 0; i < TAP_MAX; i++) {
+      this.tapPips.push(this.view(this.add.image(62 + i * 40, L.railY + 78, 'miniCoin').setDepth(22)));
     }
 
     this.refreshLabels();
@@ -570,11 +583,20 @@ export class DropScene extends Phaser.Scene {
     }
     if (y > this.layout.binTop - 40) return;
     if (this.time0 - this.lastTap < 130) return;
+    if (this.tapCharges < 1) {
+      if (this.time0 - this.lastTapDeny > 900) {
+        this.lastTapDeny = this.time0;
+        sfx.play('deny');
+        this.fx.float(x, y, 'Recharge…', { size: 34, tint: 0xbfaee8, rise: 50, duration: 600, priority: true });
+      }
+      return;
+    }
     this.lastTap = this.time0;
     const s = store.dropStats;
     const cx = Phaser.Math.Clamp(x, this.layout.wall + COIN_RADIUS + 4, WORLD_W - this.layout.wall - COIN_RADIUS - 4);
     const coin = this.spawnCoin(cx, this.layout.spawnY, s.coinValue, s.coinValue, { vy: 2 });
     if (coin) {
+      this.tapCharges--;
       store.recordTap();
       sfx.play('pop');
       this.fx.glow(cx, this.layout.spawnY, 0xffffff, 5);
@@ -671,6 +693,15 @@ export class DropScene extends Phaser.Scene {
       }
     }
 
+    // Manual drop charges
+    if (this.tapCharges < TAP_MAX) {
+      this.tapRegen += STEP;
+      if (this.tapRegen >= TAP_REGEN_MS) {
+        this.tapRegen -= TAP_REGEN_MS;
+        this.tapCharges++;
+      }
+    } else this.tapRegen = 0;
+
     // Orb lifecycle
     if (!this.orb && this.time0 >= this.nextOrbAt) this.spawnOrb();
     if (this.orb && this.time0 > this.orb.until) {
@@ -713,6 +744,12 @@ export class DropScene extends Phaser.Scene {
       pv.img.setScale(1 + 0.35 * pv.flash);
     }
     if (this.orb) this.orb.img.y += Math.sin(this.time0 / 220) * 0.4;
+    const partial = this.tapRegen / TAP_REGEN_MS;
+    this.tapPips.forEach((p, i) => {
+      const full = i < this.tapCharges;
+      const filling = i === this.tapCharges;
+      p.setAlpha(full ? 1 : filling ? 0.2 + 0.4 * partial : 0.2).setScale(full ? 1 : 0.75);
+    });
 
     // Rush frame glow
     this.rushFrame.clear();

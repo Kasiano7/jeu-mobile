@@ -21,7 +21,7 @@ Les trois captures citées (`references/`) **n'étaient pas présentes dans le d
 | --- | --- |
 | Générateur en haut | 1 à 5 « droppers » qui se déplacent sur un rail et lâchent des pièces à intervalle régulier. Toucher le plateau lâche aussi une pièce (jeu actif). |
 | Bonus fixes / multiplicateurs | Portes-capteurs traversables : `+N` (proportionnel à la valeur de base) et `×1.2 / ×1.5 / ×2 / ×3`. Chaque porte agit **une fois par pièce**. Certaines portes oscillent. |
-| Bonus temporaires | Orbe doré (apparaît toutes les ~38 s, se déclenche si une pièce le touche ou si on le tape) → **RUSH ×2** sur le Drop pendant 20 s. Cadeau gratuit toutes les 4 min → argent + **FRENZY ×2** sur tout pendant 30 s (vraie récompense, aucune publicité simulée). |
+| Bonus temporaires | Orbe doré (apparaît toutes les ~60 s, se déclenche si une pièce le touche ou si on le tape) → **RUSH ×2** sur le Drop pendant 15 s. Cadeau gratuit toutes les 4 min → 45 s de revenu + **FRENZY ×2** sur tout pendant 20 s (vraie récompense, aucune publicité simulée). |
 | Bonus spéciaux de progression | Obstacles débloquables : bumpers (+valeur au contact), hélices rotatives (×1.25), porte Split (duplique la pièce). Pièces chanceuses ×5 dès le 2ᵉ plateau, bac Jackpot dès le 3ᵉ. |
 | Compartiments inférieurs | 7 bacs à multiplicateurs (bords élevés, centre faible ; jackpot central étroit sur les plateaux avancés). La valeur créditée est `valeur de la pièce × multiplicateur du bac × boosts`, c'est donc le parcours qui décide du gain. |
 | Grille de cartes (capture 1) | 3 à 6 emplacements de cartes, 10 cartes (4 raretés), paquets achetables, doublons = montée de niveau. Une carte n'agit que si elle est équipée. |
@@ -59,8 +59,20 @@ Règles d'intégration :
 ## 3. Économie
 
 - Coûts géométriques `base × croissance^niveau`. Les effets sont surtout **linéaires**, avec un ×2 tous les 25 niveaux, pour que le temps d'amortissement augmente : progression rapide au début, plus lente ensuite.
-- Simulation (`npx vite-node scripts/sim.ts`, joueur glouton, sans cartes ni agrandissements) : environ 1,8 K$/s à 1 min, Silver Rapids vers 9 min, Golden Canyon vers 40 min, Emerald Vault vers 2 h 50.
-- Niveau joueur indexé sur les gains cumulés (×3,4 par niveau) : chaque niveau donne de l'argent et une carte. La Factory se débloque au niveau 2 (moins d'une minute).
+- **Calibration sur le vrai plateau** : la valeur moyenne d'une pièce a été mesurée en accélérant la vraie scène Matter (10 minutes simulées par plateau). On mesure la somme des portes `+N`, le produit des portes `×N` et le multiplicateur de bac moyen par pièce. Sur le premier plateau, une pièce rapporte ~4× sa valeur de base. Ces mesures alimentent `scripts/sim.ts`.
+- Simulation (`npx vite-node scripts/sim.ts`, joueur optimal sans cartes ni agrandissements ; un vrai joueur ira environ 1,5 à 2× moins vite) :
+
+  | Temps | Revenu | Étape |
+  | --- | --- | --- |
+  | 1 min | ~55 $/s | 1ʳᵉ amélioration à ~5 s |
+  | 5 min | ~1,5 K$/s | 2ᵉ générateur à ~1 min 20 |
+  | 15 min | ~15 K$/s | |
+  | ~21 min | | Silver Rapids |
+  | ~1 h 10 | | Golden Canyon |
+  | ~3 h 15 | | Emerald Vault |
+  | > 8 h | | Diamond Sky |
+- Lâcher manuel limité : 5 charges, +1 toutes les 2,5 s. Taper aide sans remplacer la machine.
+- Niveau joueur indexé sur les gains cumulés (×3,6 par niveau) : chaque niveau donne de l'argent (~10 s de revenu) et une carte. La Factory se débloque au niveau 2 (moins d'une minute).
 - 25 missions écrites, puis des missions infinies générées automatiquement.
 - Gains hors ligne : revenu mesuré × durée, plafonnés à 2 h et à 50 % d'efficacité (améliorables avec la carte Night Shift). Ils s'appliquent aussi quand l'app revient du second plan.
 - Débit physique plafonné à 6 pièces/s : au-delà, chaque pièce représente un lot de pièces (valeur, bonus de portes et de bumpers multipliés d'autant). Les améliorations de cadence restent donc réellement efficaces sans saturer le plateau.
