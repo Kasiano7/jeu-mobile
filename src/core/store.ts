@@ -45,13 +45,14 @@ export class GameStore {
   readonly events = new Emitter<GameEvents>();
   /** Bumped (throttled) whenever anything visible changes; drives React re-renders. */
   version = 0;
-  pendingOffline: OfflineReport | null = null;
 
   private listeners = new Set<() => void>();
   private flushTimer: ReturnType<typeof setTimeout> | null = null;
   private dropStatsCache: DropStats | null = null;
   private factoryStatsCache: FactoryStats | null = null;
   private buckets: Decimal[] = Array.from({ length: BUCKETS }, () => ZERO);
+  /** Same credits with temporary boosts (rush/frenzy) divided out: basis for rewards and offline gains. */
+  private baseBuckets: Decimal[] = Array.from({ length: BUCKETS }, () => ZERO);
   private bucketSecond = 0;
   private saveTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -64,10 +65,7 @@ export class GameStore {
     const loaded = raw ? deserialize(raw, now()) : null;
     this.state = loaded ?? createInitialState(now());
     this.bucketSecond = Math.floor(now() / 1000);
-    if (loaded) {
-      const report = computeOffline(this.state, now() - this.state.lastSeen);
-      if (report.amount.gt(0)) this.pendingOffline = report;
-    }
+    if (loaded) this.queueOffline(now() - this.state.lastSeen);
     // Levels earned before the last save but not yet processed.
     this.state.level = Math.max(this.state.level, 1);
   }
@@ -126,13 +124,17 @@ export class GameStore {
     return this.state.boosts.frenzyUntil > t;
   }
 
-  /** Measured income per second over the last `seconds` (real credits from both machines). */
-  measuredRate(seconds = 10): Decimal {
+  /**
+   * Measured income per second over the last `seconds` (real credits from both machines).
+   * With `base`, temporary boosts are excluded (rewards and offline gains must not stack them).
+   */
+  measuredRate(seconds = 10, base = false): Decimal {
     this.rollBuckets();
     const n = Math.max(1, Math.min(BUCKETS - 1, seconds));
     const cur = Math.floor(this.now() / 1000);
+    const src = base ? this.baseBuckets : this.buckets;
     let sum = ZERO;
-    for (let i = 1; i <= n; i++) sum = sum.add(this.buckets[(cur - i) % BUCKETS]);
+    for (let i = 1; i <= n; i++) sum = sum.add(src[(cur - i) % BUCKETS]);
     return sum.div(n);
   }
 
@@ -146,20 +148,27 @@ export class GameStore {
     const cur = Math.floor(this.now() / 1000);
     if (cur <= this.bucketSecond) return;
     const steps = Math.min(BUCKETS, cur - this.bucketSecond);
-    for (let i = 1; i <= steps; i++) this.buckets[(this.bucketSecond + i) % BUCKETS] = ZERO;
+    for (let i = 1; i <= steps; i++) {
+      this.buckets[(this.bucketSecond + i) % BUCKETS] = ZERO;
+      this.baseBuckets[(this.bucketSecond + i) % BUCKETS] = ZERO;
+    }
     this.bucketSecond = cur;
+  }
+
+  /** Temporary part (rush, frenzy) of the multiplier applied to a credit from `source`. */
+  boostMultiplier(source: IncomeSource): number {
+    const t = this.now();
+    let m = 1;
+    if (source === 'drop' && this.isRush(t)) m *= RUSH.mult;
+    if ((source === 'drop' || source === 'factory') && this.isFrenzy(t)) m *= FREE_REWARD.frenzyMult;
+    return m;
   }
 
   /** Multiplier currently applied to a credit from `source`. */
   incomeMultiplier(source: IncomeSource): number {
-    let m = 1;
-    const t = this.now();
-    if (source === 'drop') {
-      m *= this.dropStats.incomeMult;
-      if (this.isRush(t)) m *= RUSH.mult;
-    }
+    let m = this.boostMultiplier(source);
+    if (source === 'drop') m *= this.dropStats.incomeMult;
     if (source === 'factory') m *= this.factoryStats.incomeMult;
-    if ((source === 'drop' || source === 'factory') && this.isFrenzy(t)) m *= FREE_REWARD.frenzyMult;
     return m;
   }
 
@@ -170,17 +179,18 @@ export class GameStore {
   earn(base: Decimal, source: IncomeSource): Decimal {
     const amount = base.mul(this.incomeMultiplier(source)).floor();
     if (amount.lte(0)) return ZERO;
-    this.addMoney(amount, source);
+    this.addMoney(amount, source, amount.div(this.boostMultiplier(source)));
     return amount;
   }
 
-  private addMoney(amount: Decimal, source: IncomeSource) {
+  private addMoney(amount: Decimal, source: IncomeSource, unboosted: Decimal = amount) {
     this.state.money = this.state.money.add(amount);
     this.state.lifetimeEarned = this.state.lifetimeEarned.add(amount);
     if (source === 'drop' || source === 'factory') {
       this.rollBuckets();
       const i = this.bucketSecond % BUCKETS;
       this.buckets[i] = this.buckets[i].add(amount);
+      this.baseBuckets[i] = this.baseBuckets[i].add(unboosted);
     }
     this.events.emit('credit', { amount, source });
     this.checkLevel();
@@ -199,7 +209,7 @@ export class GameStore {
     const target = levelFor(this.state.lifetimeEarned);
     while (this.state.level < target) {
       this.state.level++;
-      const money = D(25 * this.state.level).max(this.measuredRate(30).mul(10)).floor();
+      const money = D(25 * this.state.level).max(this.measuredRate(30, true).mul(10)).floor();
       this.state.money = this.state.money.add(money);
       const card = this.grantRandomCard(this.state.level >= 4 ? 1 : 0, true);
       this.events.emit('levelUp', { level: this.state.level, card, money });
@@ -279,7 +289,7 @@ export class GameStore {
   buyFactoryUpgrade(id: FactoryUpgradeId): boolean {
     const def = FACTORY_UPGRADES[id];
     const lvl = this.state.factory.upgrades[id];
-    if (lvl >= def.max) return false;
+    if (!this.factoryUnlocked || lvl >= def.max) return false;
     if (!this.spend(def.cost(lvl))) return false;
     this.state.factory.upgrades[id] = lvl + 1;
     this.statsChanged();
@@ -295,7 +305,7 @@ export class GameStore {
   }
 
   addWheel(): boolean {
-    if (!this.canAddWheel) return false;
+    if (!this.factoryUnlocked || !this.canAddWheel) return false;
     if (!this.spend(this.wheelCost)) return false;
     this.state.factory.wheels.push(0);
     const index = this.state.factory.wheels.length - 1;
@@ -325,7 +335,7 @@ export class GameStore {
 
   expandFactory(): boolean {
     const cost = this.expandCost;
-    if (!cost || !this.spend(cost)) return false;
+    if (!this.factoryUnlocked || !cost || !this.spend(cost)) return false;
     this.state.factory.slotsUnlocked = Math.min(FACTORY.maxSlots, this.state.factory.slotsUnlocked + 2);
     this.statsChanged();
     this.events.emit('slotsExpanded', this.state.factory.slotsUnlocked);
@@ -342,7 +352,16 @@ export class GameStore {
     return packCost(this.state.cards.packsBought);
   }
 
+  /** True when every card is at its max level (packs would give nothing). */
+  get collectionComplete(): boolean {
+    return CARD_IDS.every((id) => (this.state.cards.owned[id] ?? 0) >= CARDS[id].maxLevel);
+  }
+
   buyPack(): CardId | null {
+    if (this.collectionComplete) {
+      this.events.emit('toast', { text: '🏆 Collection complète : toutes les cartes sont au niveau max', tone: 'info' });
+      return null;
+    }
     if (!this.spend(this.packCost)) return null;
     this.state.cards.packsBought++;
     const id = this.grantRandomCard(0);
@@ -434,7 +453,7 @@ export class GameStore {
   }
 
   missionReward(m: MissionDef): Decimal {
-    return D(m.reward.minMoney).max(this.measuredRate(30).mul(m.reward.incomeSeconds)).floor();
+    return D(m.reward.minMoney).max(this.measuredRate(30, true).mul(m.reward.incomeSeconds)).floor();
   }
 
   claimMission(id: string): boolean {
@@ -461,7 +480,7 @@ export class GameStore {
   }
 
   freeRewardAmount(): Decimal {
-    return D(FREE_REWARD.minMoney).max(this.measuredRate(30).mul(FREE_REWARD.incomeSeconds)).floor();
+    return D(FREE_REWARD.minMoney).max(this.measuredRate(30, true).mul(FREE_REWARD.incomeSeconds)).floor();
   }
 
   claimFreeReward(): Decimal | null {
@@ -480,22 +499,39 @@ export class GameStore {
 
   /* -------------------------------- Offline -------------------------------- */
 
+  get pendingOffline(): OfflineReport | null {
+    return this.state.pendingOffline;
+  }
+
+  /**
+   * Adds an absence to the uncollected offline gains (never replaces them), capped
+   * like a single absence, and saves right away so the same time is never paid twice.
+   */
+  private queueOffline(elapsedMs: number) {
+    const report = computeOffline(this.state, elapsedMs);
+    if (report.amount.lte(0)) return;
+    const prev = this.state.pendingOffline;
+    const cap = computeOffline(this.state, Number.MAX_SAFE_INTEGER);
+    const seconds = Math.min(cap.seconds, (prev?.seconds ?? 0) + report.seconds);
+    const amount = (prev ? prev.amount.add(report.amount) : report.amount).min(cap.amount.max(prev?.amount ?? ZERO));
+    this.state.pendingOffline = { seconds, amount };
+    this.save();
+    this.touch(true);
+  }
+
   collectOffline(): Decimal {
-    const report = this.pendingOffline;
-    this.pendingOffline = null;
+    const report = this.state.pendingOffline;
+    this.state.pendingOffline = null;
     if (!report) return ZERO;
     this.addMoney(report.amount, 'offline');
+    this.save();
     this.touch(true);
     return report.amount;
   }
 
   /** Called when the app returns from the background (the game loop was paused). */
   resumeAfter(elapsedMs: number) {
-    const report = computeOffline(this.state, elapsedMs);
-    if (report.amount.gt(0)) {
-      this.pendingOffline = report;
-      this.touch(true);
-    }
+    this.queueOffline(elapsedMs);
   }
 
   /* --------------------------------- Misc ---------------------------------- */
@@ -520,6 +556,9 @@ export class GameStore {
 
   haptic(ms: number) {
     if (!this.state.settings.haptics) return;
+    // Browsers only allow vibration during a user gesture (not when a coin triggers something).
+    const activation = (typeof navigator !== 'undefined' && (navigator as any).userActivation) || null;
+    if (activation && !activation.isActive) return;
     try {
       navigator.vibrate?.(ms);
     } catch {
@@ -529,8 +568,8 @@ export class GameStore {
 
   save() {
     this.state.lastSeen = this.now();
-    // Persist a conservative long-window income rate for offline gains.
-    const rate = this.measuredRate(30);
+    // Persist a conservative long-window income rate (boosts excluded) for offline gains.
+    const rate = this.measuredRate(30, true);
     if (rate.gt(0) || this.state.incomeRate.eq(0)) this.state.incomeRate = rate;
     this.storage.save(serialize(this.state));
   }
@@ -551,7 +590,7 @@ export class GameStore {
     this.state = createInitialState(this.now());
     this.state.settings = settings;
     this.buckets = this.buckets.map(() => ZERO);
-    this.pendingOffline = null;
+    this.baseBuckets = this.baseBuckets.map(() => ZERO);
     this.mode = 'drop';
     this.statsChanged();
     this.events.emit('reset');

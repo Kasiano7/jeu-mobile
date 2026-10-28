@@ -155,12 +155,62 @@ describe('save / load', () => {
     expect(reloaded.pendingOffline?.amount.toNumber()).toBe(100 * 7200 * 0.5);
   });
 
+  it('accumulates uncollected offline gains across absences and persists them', () => {
+    const { store, storage, clock } = makeStore();
+    store.state.incomeRate = D(10);
+    store.save();
+    clock.advance(600_000);
+    const a = new GameStore(storage, clock.now);
+    expect(a.pendingOffline?.amount.toNumber()).toBe(10 * 600 * 0.5);
+    clock.advance(600_000); // closed again without collecting
+    const b = new GameStore(storage, clock.now);
+    expect(b.pendingOffline?.amount.toNumber()).toBe(10 * 1200 * 0.5);
+    b.resumeAfter(60_000);
+    expect(b.pendingOffline?.amount.toNumber()).toBe(10 * 1260 * 0.5);
+    expect(b.collectOffline().toNumber()).toBe(6300);
+    expect(new GameStore(storage, clock.now).pendingOffline).toBeNull();
+  });
+
+  it('does not count temporary boosts in the offline/reward income rate', () => {
+    const { store, clock } = makeStore();
+    store.state.boosts.rushUntil = Number.MAX_SAFE_INTEGER;
+    for (let i = 0; i < 5; i++) {
+      store.earn(D(100), 'drop');
+      clock.advance(1000);
+    }
+    expect(store.measuredRate(5).toNumber()).toBe(200);
+    expect(store.measuredRate(5, true).toNumber()).toBe(100);
+  });
+
+  it('never charges for a pack when the collection is complete', () => {
+    const { store } = makeStore();
+    for (const id of Object.keys(store.state.cards.owned)) delete (store.state.cards.owned as any)[id];
+    for (const id of ['goldenTouch', 'luckyBins', 'gatekeeper', 'turboBelt', 'overclock', 'cogMaster', 'nightShift', 'rushHour', 'bouncer', 'midas'] as const)
+      store.state.cards.owned[id] = 10;
+    store.earn(D(1e9), 'reward');
+    const m0 = store.state.money.toString();
+    expect(store.buyPack()).toBeNull();
+    expect(store.state.money.toString()).toBe(m0);
+  });
+
+  it('factory purchases require the factory to be unlocked', () => {
+    const { store } = makeStore();
+    store.state.money = D(1e12);
+    expect(store.factoryUnlocked).toBe(false);
+    expect(store.addWheel()).toBe(false);
+    expect(store.buyFactoryUpgrade('speed')).toBe(false);
+  });
+
   it('survives corrupted saves', () => {
     expect(deserialize('not json')).toBeNull();
     const s = deserialize(JSON.stringify({ money: 'garbage', drop: { upgrades: { value: -5 } }, cards: { slots: ['nope'] } }))!;
     expect(s.money.toNumber()).toBe(0);
     expect(s.drop.upgrades.value).toBe(0);
     expect(s.cards.slots[0]).toBeNull();
+    const bad = deserialize(JSON.stringify({ money: '1eNaN', lifetimeEarned: 'Infinity', drop: { upgrades: { dropper: 10_000 } } }))!;
+    expect(bad.money.toNumber()).toBe(0);
+    expect(bad.lifetimeEarned.toNumber()).toBe(0);
+    expect(bad.drop.upgrades.dropper).toBe(DROP_UPGRADES.dropper.max);
   });
 
   it('ignores negative elapsed time (clock moved backwards)', () => {

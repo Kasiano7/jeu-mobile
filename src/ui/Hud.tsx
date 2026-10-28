@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { formatMoney, formatDuration } from '../core/bignum';
+import { FREE_REWARD } from '../core/config';
 import { sfx } from '../game/shared/audio';
 import { levelProgress } from '../core/stats';
 import { useStore, useTicker } from './hooks';
@@ -55,7 +56,7 @@ export function TopHud({ onSettings, onMissions }: { onSettings: () => void; onM
           const amount = store.claimFreeReward();
           if (amount) {
             sfx.play('level');
-            store.events.emit('toast', { text: `🎁 +${formatMoney(amount)} et FRENZY ×2 pendant 30 s !`, tone: 'good' });
+            store.events.emit('toast', { text: `🎁 +${formatMoney(amount)} et FRENZY ×${FREE_REWARD.frenzyMult} pendant ${FREE_REWARD.frenzyMs / 1000} s !`, tone: 'good' });
           } else {
             sfx.play('deny');
             store.events.emit('toast', { text: `🎁 Prochain cadeau dans ${formatDuration(wait / 1000)}`, tone: 'info' });

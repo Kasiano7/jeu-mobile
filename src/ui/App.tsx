@@ -29,11 +29,26 @@ export function App() {
     }, []),
   );
 
-  // Unlock WebAudio on the very first gesture (iOS requirement).
+  // Unlock WebAudio from a real activation gesture (touchend/click, not touch pointerdown on iOS),
+  // keep trying until the context runs, and resume it when the app comes back to the foreground.
   useEffect(() => {
-    const unlock = () => sfx.unlock();
-    window.addEventListener('pointerdown', unlock, { once: true });
-    return () => window.removeEventListener('pointerdown', unlock);
+    const events = ['touchend', 'click', 'keydown'] as const;
+    const unlock = () => {
+      sfx.unlock();
+      if (sfx.running) events.forEach((e) => window.removeEventListener(e, unlock, true));
+    };
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        sfx.unlock();
+        events.forEach((e) => window.addEventListener(e, unlock, true));
+      }
+    };
+    events.forEach((e) => window.addEventListener(e, unlock, true));
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      events.forEach((e) => window.removeEventListener(e, unlock, true));
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, []);
 
   return (
@@ -51,6 +66,10 @@ export function App() {
       {sheet?.kind === 'wheel' && <WheelSheet index={sheet.index} onClose={() => setSheet(null)} />}
       <Celebrations />
       <OfflineModal />
+      <div className="rotate-hint" aria-hidden>
+        <div>📱↻</div>
+        <p>Tourne ton téléphone en mode portrait</p>
+      </div>
     </div>
   );
 }

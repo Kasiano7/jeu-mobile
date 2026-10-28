@@ -2,6 +2,7 @@ import type { BoardDef, DropStats, GateKind } from '../../core/types';
 import { BUMPER_RADIUS, COIN_RADIUS, PEG_RADIUS } from '../shared/textures';
 
 export const WORLD_W = 1080;
+export const WALL_BUMP_RADIUS = 30;
 const WALL = 26;
 
 export interface GateLayout {
@@ -37,6 +38,8 @@ export interface DropLayout {
   binBottom: number;
   pegs: { x: number; y: number }[];
   bumpers: { x: number; y: number }[];
+  /** Half-domes on the side walls; `dir` points towards the board centre. */
+  wallBumps: { x: number; y: number; dir: number }[];
   spinners: { id: number; x: number; y: number; dir: number }[];
   gates: GateLayout[];
   bins: BinLayout[];
@@ -68,6 +71,7 @@ export function buildDropLayout(board: BoardDef, stats: Pick<DropStats, 'bumpers
   const band1 = Math.round((rows - 1) * 0.66);
 
   const pegs: { x: number; y: number; row: number }[] = [];
+  const wallBumps: { x: number; y: number; dir: number }[] = [];
   const rowY: number[] = [];
   for (let r = 0; r < rows; r++) {
     const y = fieldTop + r * dy;
@@ -75,7 +79,13 @@ export function buildDropLayout(board: BoardDef, stats: Pick<DropStats, 'bumpers
     if (r === band0 || r === band1) continue;
     const odd = r % 2 === 1;
     const start = odd ? 90 + sx / 2 : 90;
-    for (let x = start; x <= W - 90 + 1; x += sx) pegs.push({ x, y, row: r });
+    for (let x = start; x <= W - 90 + 1; x += sx) {
+      // Edge pegs of even rows would sit closer to the wall than a coin's diameter:
+      // a coin wedges between them and the frictionless wall. Wall bumps replace them.
+      if (!odd && (x < sx || x > W - sx)) continue;
+      pegs.push({ x, y, row: r });
+    }
+    if (!odd) wallBumps.push({ x: WALL, y, dir: 1 }, { x: W - WALL, y, dir: -1 });
   }
 
   const gates: GateLayout[] = [];
@@ -163,6 +173,7 @@ export function buildDropLayout(board: BoardDef, stats: Pick<DropStats, 'bumpers
     binTop,
     binBottom,
     pegs: pegs.map(({ x, y }) => ({ x, y })),
+    wallBumps,
     bumpers,
     spinners,
     gates,

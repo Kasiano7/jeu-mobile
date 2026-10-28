@@ -91,7 +91,10 @@ export function SettingsSheet({ onClose }: { onClose: () => void }) {
       >
         {confirm ? '⚠️ Confirmer la remise à zéro' : 'Recommencer la partie'}
       </Button>
-      <p className="credits">Money Machine v1.0 — graphismes et sons générés en code.</p>
+      <p className="credits">
+        Money Machine v1.0 — aucun achat, aucune publicité, aucune donnée personnelle collectée. La partie est sauvegardée uniquement
+        sur cet appareil. Astuce : ajoute le jeu à l'écran d'accueil pour ne jamais perdre ta sauvegarde.
+      </p>
     </Sheet>
   );
 }

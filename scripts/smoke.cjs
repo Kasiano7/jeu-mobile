@@ -14,7 +14,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const errors = [];
   page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
   page.on('console', (m) => m.type() === 'error' && errors.push('console: ' + m.text()));
-  await page.goto(url);
+  await page.goto(url + (url.includes('?') ? '&' : '?') + 'debug');
   await page.waitForFunction(() => window.__MM__ && document.querySelector('canvas'), null, { timeout: 15000 });
   const S = (fn, arg) => page.evaluate(fn, arg);
   const money = () => S(() => window.__MM__.state.money.toNumber());

@@ -18,6 +18,8 @@ async function boot() {
     /* fall back to system fonts */
   }
 
+  // Ask the browser not to evict the save (Safari clears site storage after 7 days without a visit).
+  void navigator.storage?.persist?.().catch(() => {});
   store.startAutosave(5000);
   let hiddenAt = 0;
   document.addEventListener('visibilitychange', () => {

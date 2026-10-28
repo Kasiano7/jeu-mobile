@@ -1,5 +1,5 @@
 import { D } from './bignum';
-import { CARD_IDS, CARD_SLOTS, FACTORY } from './config';
+import { CARD_IDS, CARD_SLOTS, DROP_UPGRADES, FACTORY, FACTORY_UPGRADES } from './config';
 import type { CardId, GameState } from './types';
 
 export const SAVE_VERSION = 1;
@@ -49,6 +49,14 @@ export function memoryAdapter(): StorageAdapter {
   };
 }
 
+const prefersReducedMotion = () => {
+  try {
+    return typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch {
+    return false;
+  }
+};
+
 export function createInitialState(now = Date.now()): GameState {
   return {
     version: SAVE_VERSION,
@@ -75,6 +83,7 @@ export function createInitialState(now = Date.now()): GameState {
     missions: { claimed: [] },
     boosts: { rushUntil: 0, frenzyUntil: 0, freeRewardReadyAt: 0 },
     incomeRate: D(0),
+    pendingOffline: null,
     stats: {
       coinsCollected: 0,
       gateHits: 0,
@@ -87,7 +96,7 @@ export function createInitialState(now = Date.now()): GameState {
       rewardsClaimed: 0,
       taps: 0,
     },
-    settings: { sound: true, haptics: true, reducedMotion: false },
+    settings: { sound: true, haptics: true, reducedMotion: prefersReducedMotion() },
     prestige: { points: D(0), count: 0 },
   };
 }
@@ -98,6 +107,7 @@ export function serialize(s: GameState): string {
     money: s.money.toString(),
     lifetimeEarned: s.lifetimeEarned.toString(),
     incomeRate: s.incomeRate.toString(),
+    pendingOffline: s.pendingOffline ? { seconds: s.pendingOffline.seconds, amount: s.pendingOffline.amount.toString() } : null,
     prestige: { ...s.prestige, points: s.prestige.points.toString() },
   });
 }
@@ -110,7 +120,8 @@ const num = (v: unknown, fallback: number, min = 0, max = Number.MAX_SAFE_INTEGE
 const dec = (v: unknown) => {
   try {
     const d = D(typeof v === 'string' || typeof v === 'number' ? v : 0);
-    return Number.isFinite(d.mantissa) && d.gte(0) ? d : D(0);
+    // Reject NaN/Infinity mantissas or exponents (a NaN exponent would make every price affordable).
+    return Number.isFinite(d.mantissa) && Number.isFinite(d.exponent) && Math.abs(d.exponent) < 9e15 && d.gte(0) ? d : D(0);
   } catch {
     return D(0);
   }
@@ -135,18 +146,22 @@ export function deserialize(raw: string, now = Date.now()): GameState | null {
     money: dec(o.money),
     lifetimeEarned: dec(o.lifetimeEarned),
     incomeRate: dec(o.incomeRate),
+    pendingOffline:
+      o.pendingOffline && typeof o.pendingOffline === 'object'
+        ? { seconds: num(o.pendingOffline.seconds, 0), amount: dec(o.pendingOffline.amount) }
+        : null,
     createdAt: num(o.createdAt, now),
     lastSeen: num(o.lastSeen, now),
     level: num(o.level, 1, 1, 1000),
   };
   const du = o.drop?.upgrades ?? {};
   for (const k of Object.keys(base.drop.upgrades) as (keyof typeof base.drop.upgrades)[]) {
-    s.drop.upgrades[k] = num(du[k], 0, 0, 10_000);
+    s.drop.upgrades[k] = num(du[k], 0, 0, DROP_UPGRADES[k].max);
   }
   s.drop.board = num(o.drop?.board, 0, 0, 4);
   const fu = o.factory?.upgrades ?? {};
-  s.factory.upgrades.speed = num(fu.speed, 0, 0, 10_000);
-  s.factory.upgrades.multiplier = num(fu.multiplier, 0, 0, 10_000);
+  s.factory.upgrades.speed = num(fu.speed, 0, 0, FACTORY_UPGRADES.speed.max);
+  s.factory.upgrades.multiplier = num(fu.multiplier, 0, 0, FACTORY_UPGRADES.multiplier.max);
   s.factory.slotsUnlocked = num(o.factory?.slotsUnlocked, FACTORY.initialSlots, FACTORY.initialSlots, FACTORY.maxSlots);
   const wheels = Array.isArray(o.factory?.wheels) ? o.factory.wheels : [];
   s.factory.wheels = wheels.slice(0, s.factory.slotsUnlocked).map((w: unknown) => num(w, 0, 0, FACTORY.wheelMaxLevel));

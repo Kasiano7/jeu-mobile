@@ -1,4 +1,18 @@
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
+
+/**
+ * Absolute site URL for social previews (og:image must be absolute for most scrapers).
+ * Set SITE_URL, or let Vercel provide VERCEL_PROJECT_PRODUCTION_URL; falls back to relative URLs.
+ */
+function siteUrl(): string {
+  const raw = process.env.SITE_URL || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : '');
+  return raw ? raw.replace(/\/?$/, '/') : './';
+}
+
+const htmlSiteUrl = (): Plugin => ({
+  name: 'html-site-url',
+  transformIndexHtml: (html) => html.replaceAll('%SITE_URL%', siteUrl()),
+});
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
@@ -6,10 +20,11 @@ export default defineConfig({
   // Relative base keeps the build usable from Vercel, a sub-path or a Capacitor webview.
   base: './',
   plugins: [
+    htmlSiteUrl(),
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
+      includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'robots.txt'],
       manifest: {
         name: 'Money Machine',
         short_name: 'Money Machine',
@@ -28,6 +43,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        globIgnores: ['og-image.png'],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
       },
     }),

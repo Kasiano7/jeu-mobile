@@ -1,4 +1,4 @@
-import { useRef, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { sfx } from '../game/shared/audio';
 
 interface Props {
@@ -44,7 +44,10 @@ export function Button({ onPress, disabled, dim, color = 'mint', className = '',
     timer.current = null;
   };
 
+  useEffect(() => stop, []);
+
   const start = () => {
+    stop(); // a second finger must not leave an orphaned repeat loop
     if (!repeat || disabled) return;
     fired.current = false;
     let delay = 380;

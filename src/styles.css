@@ -1216,3 +1216,27 @@ button {
   .money { font-size: 24px; }
   .up-name { font-size: 12px; }
 }
+
+/* Phones held in landscape: the game is portrait-only. */
+.rotate-hint {
+  display: none;
+}
+
+@media (orientation: landscape) and (max-height: 500px) and (pointer: coarse) {
+  .rotate-hint {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: grid;
+    place-content: center;
+    gap: 10px;
+    text-align: center;
+    font-family: var(--display);
+    font-size: 22px;
+    background: var(--bg);
+  }
+
+  .rotate-hint div {
+    font-size: 54px;
+  }
+}

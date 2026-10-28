@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { Decimal, formatMoney, formatMult, formatNumber } from '../../core/bignum';
 import { FACTORY } from '../../core/config';
 import { store } from '../../core/instance';
+import { applyMode } from '../mode';
 import { sfx } from '../shared/audio';
 import { FONTS } from '../shared/font';
 import { Fx, pulse } from '../shared/fx';
@@ -92,17 +93,20 @@ export class FactoryScene extends Phaser.Scene {
       }),
     );
     this.scale.on('resize', this.onResize, this);
-    this.events.once('shutdown', () => {
+    const cleanup = () => {
       this.unsub.forEach((u) => u());
+      this.unsub = [];
       this.scale.off('resize', this.onResize, this);
-    });
+    };
+    this.events.once('shutdown', cleanup);
+    this.events.once('destroy', cleanup);
+    applyMode(this.game);
   }
 
   private onResize() {
     this.cameras.main.setSize(this.scale.gameSize.width, this.scale.gameSize.height);
-    for (const it of [...this.items]) this.releaseItem(it);
-    this.items = [];
-    this.build();
+    // Items keep their belt position (arc length): nothing in production is lost.
+    if (this.scale.gameSize.height !== this.H) this.build();
   }
 
   /* -------------------------------- Layout --------------------------------- */
@@ -201,6 +205,8 @@ export class FactoryScene extends Phaser.Scene {
 
   private drawPlaceholder(slot: Slot, state: 'owned' | 'next' | 'empty' | 'locked') {
     const c = slot.placeholder;
+    this.tweens.killTweensOf(c);
+    c.setScale(1);
     c.removeAll(true);
     if (state === 'owned') return;
     const g = this.add.graphics();
@@ -232,9 +238,6 @@ export class FactoryScene extends Phaser.Scene {
       c.add(this.add.bitmapText(0, -14, FONTS.main, '+', 80).setOrigin(0.5));
       c.add(this.add.bitmapText(0, 40, FONTS.main, formatMoney(store.wheelCost), 28).setOrigin(0.5));
       this.tweens.add({ targets: c, scale: { from: 1, to: 1.05 }, yoyo: true, repeat: -1, duration: 700, ease: 'Sine.InOut' });
-    } else {
-      this.tweens.killTweensOf(c);
-      c.setScale(1);
     }
   }
 
@@ -284,6 +287,7 @@ export class FactoryScene extends Phaser.Scene {
   }
 
   private onSlotTap(index: number) {
+    if (!this.sys.settings.visible || !store.factoryUnlocked) return;
     sfx.unlock();
     const st = store.state.factory;
     if (index < st.wheels.length) {

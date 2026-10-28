@@ -80,15 +80,20 @@ Règles d'intégration :
 
 ## 4. Qualité et tests
 
-- `npm test` : 18 tests (formats, coûts, crédits, boosts, roues et agrandissements, niveaux, cartes, missions, cadeau, plateaux, aller-retour de sauvegarde, sauvegarde corrompue, horloge reculée, valeurs extrêmes, plafond de débit).
+- `npm test` : 22 tests (formats, coûts, crédits, boosts, roues et agrandissements, niveaux, cartes, missions, cadeau, plateaux, aller-retour de sauvegarde, sauvegarde corrompue, horloge reculée, valeurs extrêmes, plafond de débit).
 - `node scripts/smoke.cjs <url> <dossier>` : test Playwright sur un viewport iPhone. Il vérifie que les pièces tombent et sont créditées, les tapotements, l'achat d'améliorations, le passage en Factory, l'achat de roues, la production de liasses, les paquets de cartes, la persistance après rechargement et la modale de gains hors ligne.
 - `node scripts/stress.cjs <url> 45` : production maximale (5 droppers, cadence max, tous obstacles, 8 roues) pendant 45 s. Résultat : 52 pièces simultanées au maximum, aucune erreur, mémoire stable.
 
-## 5. Mobile, PWA, déploiement
+## 5. Audit
+
+Voir [`docs/AUDIT.md`](docs/AUDIT.md) : notes par domaine, corrections faites et plan d'action avant lancement.
+
+## 6. Mobile, PWA, déploiement
 
 - Monde logique de 1080 unités de large (net sur un iPhone 3×). La hauteur s'adapte au ratio d'écran et le plateau se réorganise (plus de rangées sur un écran haut).
 - Safe areas iOS (`viewport-fit=cover`, `env(safe-area-inset-*)`), `100dvh`, pas de zoom ni de rebond.
 - PWA : manifeste, icônes, service worker Workbox (le jeu fonctionne hors ligne). Aucun asset externe : les graphismes et les sons sont générés dans le code.
 - Réglages : son, vibrations, animations réduites (moins de particules, pas de tremblement de caméra), remise à zéro.
-- **Vercel** : `vercel.json` est fourni. Importer le dépôt (framework Vite, `npm run build`, sortie `dist`) suffit.
+- **Vercel** : `vercel.json` (en-têtes de sécurité, cache) est fourni. Importer le dépôt (framework Vite) suffit. L'URL absolue de l'image de partage est remplie automatiquement ; pour un domaine personnalisé, définir `SITE_URL`.
+- Outils de test : `?debug` dans l'URL expose `window.__MM__` (désactivé sinon en production). `node scripts/og-image.cjs` régénère l'image de partage.
 - **Capacitor** : `base: './'`, aucune dépendance serveur, stockage derrière `StorageAdapter`.

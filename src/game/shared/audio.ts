@@ -23,7 +23,12 @@ class Sfx {
       this.master.connect(comp);
       comp.connect(this.ctx.destination);
     }
-    if (this.ctx.state === 'suspended') void this.ctx.resume();
+    // 'suspended' before the first gesture, 'interrupted' on iOS after a call / backgrounding.
+    if (this.ctx.state !== 'running') void this.ctx.resume().catch(() => {});
+  }
+
+  get running() {
+    return this.ctx?.state === 'running';
   }
 
   private ready(name: SfxName, minGapMs: number): AudioContext | null {

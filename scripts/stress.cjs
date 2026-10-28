@@ -8,7 +8,7 @@ const seconds = Number(process.argv[3] || 45);
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  await page.goto(url);
+  await page.goto(url + (url.includes('?') ? '&' : '?') + 'debug');
   await page.waitForFunction(() => window.__PHASER_GAME__ && window.__PHASER_GAME__.scene.getScene('drop')?.time0 > 0);
   await page.evaluate(() => {
     const s = window.__MM__;

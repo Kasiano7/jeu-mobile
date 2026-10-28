@@ -2,7 +2,7 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#1b0f3b" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -11,10 +11,32 @@
     <meta name="description" content="Money Machine — fais pleuvoir l'argent : un jeu idle mobile avec plateau physique et usine à roues." />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
-    <title>Money Machine</title>
+    <title>Money Machine — jeu idle gratuit</title>
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Money Machine" />
+    <meta property="og:title" content="Money Machine — fais pleuvoir l'argent !" />
+    <meta property="og:description" content="Jeu idle gratuit : plateau à pièces avec vraie physique et usine à roues. Sans pub, sans achat, jouable direct dans le navigateur." />
+    <meta property="og:image" content="%SITE_URL%og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:url" content="%SITE_URL%" />
+    <meta property="og:locale" content="fr_FR" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Money Machine — fais pleuvoir l'argent !" />
+    <meta name="twitter:description" content="Jeu idle gratuit : plateau à pièces avec vraie physique et usine à roues." />
+    <meta name="twitter:image" content="%SITE_URL%og-image.png" />
+    <style>
+      #boot-splash { position: fixed; inset: 0; display: grid; place-items: center; background: #1b0f3b; color: #fff3b0; font: 700 18px system-ui, sans-serif; z-index: 100; }
+      #boot-splash div { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+      #boot-splash img { width: 96px; height: 96px; border-radius: 24px; animation: mm-pulse 1s ease-in-out infinite alternate; }
+      @keyframes mm-pulse { to { transform: scale(1.08); } }
+      @media (prefers-reduced-motion: reduce) { #boot-splash img { animation: none; } }
+    </style>
   </head>
   <body>
+    <div id="boot-splash"><div><img src="./favicon.svg" alt="" />Chargement…</div></div>
     <div id="root"></div>
+    <noscript>Money Machine a besoin de JavaScript pour fonctionner.</noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

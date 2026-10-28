@@ -125,8 +125,20 @@ function CardSlots({ onOpen }: { onOpen: (slot?: number) => void }) {
         })}
       </div>
       <div className="card-actions">
-        <Button testId="buy-pack" color="pink" dim={store.state.money.lt(store.packCost)} onPress={() => store.buyPack() !== null}>
-          📦 Paquet <b>{formatMoney(store.packCost)}</b>
+        <Button
+          testId="buy-pack"
+          color="pink"
+          disabled={store.collectionComplete}
+          dim={store.state.money.lt(store.packCost)}
+          onPress={() => store.buyPack() !== null}
+        >
+          {store.collectionComplete ? (
+            '🏆 Collection complète'
+          ) : (
+            <>
+              📦 Paquet <b>{formatMoney(store.packCost)}</b>
+            </>
+          )}
         </Button>
         <Button color="blue" onPress={() => onOpen()}>
           📚 Collection

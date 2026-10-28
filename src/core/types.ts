@@ -90,8 +90,10 @@ export interface GameState {
     frenzyUntil: number;
     freeRewardReadyAt: number;
   };
-  /** Measured income per second (real credits, rolling average), used for offline gains. */
+  /** Measured income per second without temporary boosts (rolling average), used for offline gains. */
   incomeRate: Decimal;
+  /** Offline gains waiting for the player to collect them (saved so they survive a reload). */
+  pendingOffline: { seconds: number; amount: Decimal } | null;
   stats: GameStats;
   settings: Settings;
   /** Reserved for a future prestige layer. */

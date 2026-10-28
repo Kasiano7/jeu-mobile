@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { Decimal, formatMoney, formatMult, formatNumber } from '../../core/bignum';
 import { store } from '../../core/instance';
 import { gateMult } from '../../core/stats';
+import { applyMode } from '../mode';
 import { sfx } from '../shared/audio';
 import { FONTS } from '../shared/font';
 import { Fx, pulse } from '../shared/fx';
@@ -15,7 +16,7 @@ import {
   boardBackground,
   gateTexture,
 } from '../shared/textures';
-import { WORLD_W, buildDropLayout, type DropLayout, type GateLayout } from './layout';
+import { WALL_BUMP_RADIUS, WORLD_W, buildDropLayout, type DropLayout, type GateLayout } from './layout';
 
 const STEP = 1000 / 60;
 /** Manual drops: a small regenerating budget so tapping helps without replacing the machine. */
@@ -139,15 +140,20 @@ export class DropScene extends Phaser.Scene {
       }),
     );
     this.scale.on('resize', this.onResize, this);
-    this.events.once('shutdown', () => {
+    const cleanup = () => {
       this.unsub.forEach((u) => u());
+      this.unsub = [];
       this.scale.off('resize', this.onResize, this);
-    });
+    };
+    this.events.once('shutdown', cleanup);
+    this.events.once('destroy', cleanup);
+    applyMode(this.game);
   }
 
   private onResize() {
     this.cameras.main.setSize(this.scale.gameSize.width, this.scale.gameSize.height);
-    this.rebuild();
+    // Phaser also emits resize when only the CSS size changed: rebuild on real changes only.
+    if (this.scale.gameSize.height !== this.layout.H) this.rebuild();
   }
 
   /* ------------------------------- Building -------------------------------- */
@@ -227,6 +233,12 @@ export class DropScene extends Phaser.Scene {
       const img = this.view(this.add.image(p.x, p.y, 'peg').setDepth(5).setTint(pal.peg));
       this.pegViews.push({ img, flash: 0 });
     });
+
+    // Wall bumps: deflect coins away from the side walls (no wedge possible).
+    for (const b of L.wallBumps) {
+      this.addStatic(M.add.circle(b.x, b.y, WALL_BUMP_RADIUS, { isStatic: true, restitution: 0.5, friction: 0 }), { kind: 'wall' });
+      this.view(this.add.image(b.x, b.y, 'wallBump').setOrigin(b.dir > 0 ? 0 : 1, 0.5).setDepth(5).setTint(pal.peg).setFlipX(b.dir < 0));
+    }
 
     // Bumpers
     for (const b of L.bumpers) {
@@ -681,11 +693,13 @@ export class DropScene extends Phaser.Scene {
       if (sp < 0.35 && p.y < L.binTop) {
         c.still += STEP;
         if (c.still > 900) {
-          this.matter.body.setVelocity(c.body, { x: (Math.random() - 0.5) * 7, y: -2.5 });
+          // Nudge towards the centre of the board, never back into a wall.
+          const towardCentre = Math.sign(L.W / 2 - p.x) || 1;
+          this.matter.body.setVelocity(c.body, { x: towardCentre * (3 + Math.random() * 3), y: -2 });
           c.still = 0;
         }
       } else c.still = 0;
-      if (c.age > 40_000 && p.y < L.binTop) {
+      if (c.age > 20_000 && p.y < L.binTop) {
         // Never lose a coin: route it to the nearest bin.
         const bin = L.bins.findIndex((b) => p.x >= b.x0 && p.x < b.x1);
         c.alive = false;

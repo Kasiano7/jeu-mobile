@@ -243,6 +243,31 @@ export function generateBaseTextures(scene: Phaser.Scene) {
     ctx.fill();
   });
 
+  // Wall bump: metal half-dome bolted to the left wall (flipped for the right wall)
+  canvasTex(scene, 'wallBump', 40, 76, (ctx) => {
+    const r = 30;
+    const cy = 38;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, 40, 76);
+    ctx.clip();
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.beginPath();
+    ctx.arc(2, cy + 4, r, -Math.PI / 2, Math.PI / 2);
+    ctx.fill();
+    const g = ctx.createRadialGradient(8, cy - 10, 2, 0, cy, r);
+    g.addColorStop(0, '#ffffff');
+    g.addColorStop(1, '#8a93ab');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(0, cy, r, -Math.PI / 2, Math.PI / 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(40,30,70,0.6)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.restore();
+  });
+
   // Bumper: pink mushroom bumper with a star
   const bs = BUMPER_RADIUS * 2 + 16;
   canvasTex(scene, 'bumper', bs, bs, (ctx) => {
